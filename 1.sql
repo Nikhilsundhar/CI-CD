@@ -35,3 +35,5 @@ GROUP BY
     c.CITY,
     c.STATE,
     c.COUNTRY;
+
+aaa
