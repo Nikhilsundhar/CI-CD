@@ -4,6 +4,8 @@ on:
   pull_request:
     branches:
       - main
+  types:
+      - closed
 
 jobs:
   deploy:
@@ -29,6 +31,15 @@ jobs:
           SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
 
         run: |
-          snow sql \
-            --temporary-connection \
-            -f sql/create_view.sql
+        echo "Deploying to $SNOWFLAKE_DATABASE"
+    
+        snow sql \
+          --temporary-connection \
+          -q "
+          USE DATABASE ${SNOWFLAKE_PROD_DATABASE};
+          USE SCHEMA ${SNOWFLAKE_SCHEMA};
+          "
+    
+        snow sql \
+          --temporary-connection \
+          -f sql/create_view.sql
