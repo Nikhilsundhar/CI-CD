@@ -18,7 +18,7 @@ jobs:
       - name: Install Snowflake CLI
         uses: snowflakedb/snowflake-actions@v3
 
-      - name: Test Snowflake Connection
+      - name: Connect to snowflake and make deployments
         env:
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
           SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
