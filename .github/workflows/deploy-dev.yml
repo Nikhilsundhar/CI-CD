@@ -29,4 +29,6 @@ jobs:
           SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
 
         run: |
-          snow connection test --temporary-connection
+          snow sql \
+          --temporary-connection \
+          -q "SELECT CURRENT_VERSION();"
