@@ -31,4 +31,4 @@ jobs:
         run: |
           snow sql \
           --temporary-connection \
-          -q "SELECT CURRENT_VERSION();"
+          -f sql/create_view.sql
