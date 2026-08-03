@@ -36,4 +36,6 @@ GROUP BY
     c.STATE,
     c.COUNTRY;
 
-aaa
+
+SELECT CURRENT_ACCOUNT();
+abc
