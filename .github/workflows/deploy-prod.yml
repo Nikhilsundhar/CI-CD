@@ -1,9 +1,9 @@
-name: Deploy to DEV
+name: Deploy to PROD
 
 on:
-  push:
+  pull_request:
     branches:
-      - dev
+      - main
 
 jobs:
   deploy:
@@ -18,17 +18,17 @@ jobs:
       - name: Install Snowflake CLI
         uses: snowflakedb/snowflake-actions@v3
 
-      - name: Connect to snowflake and make deployments
+      - name: Deploy to PROD
         env:
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
           SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
           SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
           SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
           SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
-          SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DEV_DATABASE }}
+          SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_PROD_DATABASE }}
           SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
 
         run: |
           snow sql \
-          --temporary-connection \
-          -f sql/create_view.sql
+            --temporary-connection \
+            -f sql/create_view.sql
