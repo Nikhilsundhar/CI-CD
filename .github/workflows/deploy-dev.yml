@@ -1,0 +1,43 @@
+name: Deploy to DEV
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  deploy:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Snowflake CLI
+        uses: snowflakedb/snowflake-actions@v3
+
+      - name: Connect to snowflake and make deployments
+        env:
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+          SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+          SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+          SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_DEV_DATABASE }}
+          SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
+
+        run: |
+          echo "Deploying to $SNOWFLAKE_DATABASE"
+      
+          snow sql \
+            --temporary-connection \
+            -q "
+            USE DATABASE ${SNOWFLAKE_DATABASE};
+            USE SCHEMA ${SNOWFLAKE_SCHEMA};
+            "
+      
+          snow sql \
+            --temporary-connection \
+            -f sql/create_view.sql
