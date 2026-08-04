@@ -1,37 +1,63 @@
+import os
 import re
 import sys
 from pathlib import Path
 from difflib import unified_diff
 
+import snowflake.connector
+
 
 def normalize_sql(sql: str) -> str:
-    """
-    Normalize SQL before comparison.
-    """
+    """Normalize SQL for comparison."""
 
-    # Remove single-line comments
+    # Remove comments
     sql = re.sub(r'--.*', '', sql)
 
-    # Remove blank lines
-    lines = [line.strip() for line in sql.splitlines() if line.strip()]
+    # Remove CREATE OR REPLACE prefix because GET_DDL formats it differently
+    sql = re.sub(
+        r'CREATE\s+OR\s+REPLACE\s+VIEW\s+',
+        'CREATE VIEW ',
+        sql,
+        flags=re.IGNORECASE
+    )
 
-    # Join into one string
-    sql = " ".join(lines)
-
-    # Collapse multiple spaces
+    # Collapse whitespace
     sql = re.sub(r'\s+', ' ', sql)
 
-    # Ignore case
-    sql = sql.upper()
-
-    return sql.strip()
+    return sql.strip().upper()
 
 
-git_file = Path("sql/create_view.sql")
-prod_file = Path("temp/prod_view.sql")
+print("Connecting to Snowflake...")
 
-git_sql = normalize_sql(git_file.read_text())
-prod_sql = normalize_sql(prod_file.read_text())
+conn = snowflake.connector.connect(
+    account=os.environ["SNOWFLAKE_ACCOUNT"],
+    user=os.environ["SNOWFLAKE_USER"],
+    password=os.environ["SNOWFLAKE_PASSWORD"],
+    warehouse=os.environ["SNOWFLAKE_WAREHOUSE"],
+    role=os.environ["SNOWFLAKE_ROLE"],
+    database=os.environ["SNOWFLAKE_DATABASE"],
+    schema=os.environ["SNOWFLAKE_SCHEMA"]
+)
+
+cur = conn.cursor()
+
+print("Fetching Production View DDL...")
+
+cur.execute("""
+SELECT GET_DDL(
+    'VIEW',
+    'VW_GOLD_CUSTOMER_ACTIVITY'
+)
+""")
+
+prod_sql = cur.fetchone()[0]
+
+git_sql = Path("sql/create_view.sql").read_text()
+
+prod_sql = normalize_sql(prod_sql)
+git_sql = normalize_sql(git_sql)
+
+print()
 
 if git_sql == prod_sql:
     print("✅ No drift detected.")
