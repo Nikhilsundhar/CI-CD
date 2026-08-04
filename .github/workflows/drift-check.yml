@@ -1,0 +1,48 @@
+name: Drift Detection
+
+on:
+  workflow_dispatch:
+
+jobs:
+  drift-check:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Snowflake CLI
+        uses: snowflakedb/snowflake-actions@v3
+
+      - name: Create temp folder
+        run: mkdir -p temp
+
+      - name: Export Production View DDL
+        env:
+          SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+          SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
+          SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
+          SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
+          SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
+          SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_PROD_DATABASE }}
+          SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
+
+        run: |
+          snow sql \
+            --temporary-connection \
+            -o output_format=plain \
+            -q "
+              USE DATABASE ${SNOWFLAKE_DATABASE};
+              USE SCHEMA ${SNOWFLAKE_SCHEMA};
+
+              SELECT GET_DDL(
+                'VIEW',
+                'VW_GOLD_CUSTOMER_ACTIVITY'
+              );
+            " > temp/prod_view.sql
+
+      - name: Compare Git with Production
+        run: |
+          python scripts/drift_check.py
