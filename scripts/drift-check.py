@@ -74,7 +74,7 @@ def pretty(sql: str) -> str:
 # --------------------------------------------------------------------
 # Read Git SQL
 # --------------------------------------------------------------------
-git_file = Path("sql/create_view.sql")
+git_file = Path("sql/views/create_view.sql")
 
 if not git_file.exists():
     print("Git SQL file not found.")
