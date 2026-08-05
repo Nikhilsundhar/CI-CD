@@ -20,7 +20,7 @@ jobs:
 
       - name: Install Dependencies
         run: |
-          pip install snowflake-connector-python sqlglot
+          pip install snowflake-connector-python
 
       - name: Run Drift Detection
         env:
@@ -33,4 +33,4 @@ jobs:
           SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
 
         run: |
-          python scripts/drift-check.py
+          python scripts/drift_check.py
