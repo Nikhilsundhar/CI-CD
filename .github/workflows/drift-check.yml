@@ -13,14 +13,14 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install Snowflake Python Connector
+      - name: Install Dependencies
         run: |
-          pip install snowflake-connector-python
+          pip install snowflake-connector-python sqlglot
 
       - name: Run Drift Detection
         env:
@@ -33,4 +33,4 @@ jobs:
           SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
 
         run: |
-          python scripts/drift-check.py
+          python scripts/drift_check.py
