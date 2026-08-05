@@ -33,4 +33,4 @@ jobs:
           SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
 
         run: |
-          python scripts/drift_check.py
+          python scripts/drift-check.py
