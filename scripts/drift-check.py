@@ -121,6 +121,12 @@ conn.close()
 git_sql = normalize_sql(git_sql)
 prod_sql = normalize_sql(prod_sql)
 
+print("\n===== NORMALIZED GIT =====")
+print(git_sql)
+
+print("\n===== NORMALIZED PROD =====")
+print(prod_sql)
+
 
 # --------------------------------------------------------------------
 # Compare
