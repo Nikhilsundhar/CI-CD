@@ -15,27 +15,48 @@ from sqlglot import expressions as exp
 
 def normalize_sql(sql: str):
 
+    import sqlglot
+from sqlglot import expressions as exp
+
+
+def normalize_sql(sql: str):
+    """
+    Convert SQL into a canonical form using sqlglot.
+    """
+
+    # Remove comments
     sql = re.sub(r'--.*', '', sql)
 
-    sql = sql.replace('"', '')
-
-    sql = re.sub(
-        r'CREATE\s+OR\s+REPLACE',
-        'CREATE',
+    # Parse SQL
+    parsed = sqlglot.parse_one(
         sql,
-        flags=re.IGNORECASE
+        read="snowflake"
     )
 
-    sql = re.sub(
-        r'(CREATE\s+VIEW\s+\S+)\s*\([^)]*\)\s*AS',
-        r'\1 AS',
-        sql,
-        flags=re.IGNORECASE | re.DOTALL
+    # For CREATE statements compare only the object definition,
+    # not CREATE/REPLACE syntax.
+    if isinstance(parsed, exp.Create):
+
+        body = parsed.expression
+
+        if body is None:
+            return parsed.sql(
+                dialect="snowflake",
+                pretty=False,
+                normalize=True
+            )
+
+        return body.sql(
+            dialect="snowflake",
+            pretty=False,
+            normalize=True
+        )
+
+    return parsed.sql(
+        dialect="snowflake",
+        pretty=False,
+        normalize=True
     )
-
-    sql = re.sub(r'\s+', ' ', sql)
-
-    return sql.upper().strip()
 
 
 # =====================================================
@@ -44,27 +65,16 @@ def normalize_sql(sql: str):
 
 def pretty(sql):
 
-    keywords = [
-        "SELECT",
-        "FROM",
-        "WHERE",
-        "GROUP BY",
-        "ORDER BY",
-        "HAVING",
-        "LEFT JOIN",
-        "RIGHT JOIN",
-        "INNER JOIN",
-        "JOIN",
-        "ON",
-        "AS"
-    ]
+    parsed = sqlglot.parse_one(
+        sql,
+        read="snowflake"
+    )
 
-    for kw in keywords:
-        sql = sql.replace(f" {kw} ", f"\n{kw} ")
-
-    sql = sql.replace(",", ",\n")
-
-    return sql
+    return parsed.sql(
+        dialect="snowflake",
+        pretty=True,
+        normalize=True
+    )
 
 
 # =====================================================
@@ -73,21 +83,22 @@ def pretty(sql):
 
 def extract_object_details(sql):
 
-    expressions = sqlglot.parse(sql, read="snowflake")
+    parsed = sqlglot.parse_one(
+        sql,
+        read="snowflake"
+    )
 
-    for expression in expressions:
+    if not isinstance(parsed, exp.Create):
+        raise Exception("No CREATE statement found.")
 
-        if isinstance(expression, exp.Create):
+    object_type = parsed.args["kind"].upper()
 
-            object_type = expression.args["kind"].upper()
+    object_name = parsed.this.sql(
+        dialect="snowflake",
+        normalize=True
+    )
 
-            object_name = expression.this.sql(
-                dialect="snowflake"
-            ).replace('"', '').upper()
-
-            return object_type, object_name
-
-    raise Exception("No CREATE statement found.")
+    return object_type, object_name.upper()
 
 
 # =====================================================
@@ -154,6 +165,8 @@ for sql_file in sql_files:
 
     git_sql = normalize_sql(raw_sql)
 
+    git_pretty = pretty(git_sql)
+
     print(f"Checking {object_type:<12} {object_name}")
 
     try:
@@ -167,6 +180,8 @@ for sql_file in sql_files:
 
         prod_sql = normalize_sql(cur.fetchone()[0])
 
+        prod_pretty = pretty(prod_sql)
+
     except Exception as ex:
 
         checked += 1
@@ -174,12 +189,14 @@ for sql_file in sql_files:
 
         results.append({
 
-            "status": "ERROR",
-
+            "status": "FAIL",
+        
             "object": object_name,
-
-            "message": str(ex)
-
+        
+            "git": git_pretty,
+        
+            "prod": prod_pretty
+        
         })
 
         continue
