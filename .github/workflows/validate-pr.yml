@@ -1,0 +1,80 @@
+name: Validate Pull Request
+
+on:
+  pull_request:
+    branches:
+      - dev
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+jobs:
+  validate:
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Validate Source and Target Branch
+
+        run: |
+
+          BASE="${{ github.base_ref }}"
+          HEAD="${{ github.head_ref }}"
+
+          echo "Base Branch : $BASE"
+          echo "Head Branch : $HEAD"
+
+          ########################################
+          # feature/bugfix/hotfix/feat -> dev
+          ########################################
+
+          if [[ "$BASE" == "dev" ]]; then
+          
+            if [[ "$HEAD" =~ ^feature/ ]] || \
+               [[ "$HEAD" =~ ^feat- ]] || \
+               [[ "$HEAD" =~ ^bugfix/ ]] || \
+               [[ "$HEAD" =~ ^hotfix/ ]]; then
+          
+                echo "✅ Valid PR: $HEAD -> dev"
+                exit 0
+          
+            else
+          
+                echo "❌ Only feature/*, feat-*, bugfix/* or hotfix/* branches can merge into dev."
+                exit 1
+          
+            fi
+          
+          fi
+
+
+          ########################################
+          # dev -> main
+          ########################################
+
+          if [[ "$BASE" == "main" ]]; then
+
+            if [[ "$HEAD" == "dev" ]]; then
+
+                echo "✅ Valid PR: dev -> main"
+                exit 0
+
+            else
+
+                echo "❌ Only the dev branch can merge into main."
+                exit 1
+
+            fi
+
+          fi
+
+
+          ########################################
+          # Everything else
+          ########################################
+
+          echo "❌ Invalid pull request."
+          exit 1
