@@ -1,4 +1,4 @@
-name: Deploy to PROD
+name: Deploy to DEV
 
 on:
   push:
@@ -7,18 +7,20 @@ on:
 
 jobs:
   deploy:
-  
+
     runs-on: ubuntu-latest
 
     steps:
 
       - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install Snowflake CLI
         uses: snowflakedb/snowflake-actions@v3
 
-      - name: Deploy to PROD
+      - name: Deploy Changed SQL Files to DEV
         env:
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
           SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
@@ -29,15 +31,40 @@ jobs:
           SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
 
         run: |
+
           echo "Deploying to $SNOWFLAKE_DATABASE"
-      
+
           snow sql \
             --temporary-connection \
             -q "
             USE DATABASE ${SNOWFLAKE_DATABASE};
             USE SCHEMA ${SNOWFLAKE_SCHEMA};
             "
-      
-          snow sql \
-            --temporary-connection \
-            -f sql/create_view.sql
+
+          echo "Finding changed SQL files..."
+
+          CHANGED_FILES=$(git diff --name-only \
+            ${{ github.event.before }} \
+            ${{ github.sha }} \
+            | grep "^sql/.*\.sql$" || true)
+
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No SQL files changed."
+            exit 0
+          fi
+
+          echo "Files to deploy:"
+          echo "$CHANGED_FILES"
+
+          for file in $CHANGED_FILES
+          do
+            echo "--------------------------------------"
+            echo "Deploying $file"
+
+            snow sql \
+              --temporary-connection \
+              -f "$file"
+
+          done
+
+          echo "DEV deployment completed."
