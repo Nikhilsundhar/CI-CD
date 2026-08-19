@@ -1,4 +1,5 @@
 -- Creates a gold-layer customer activity summary view from TBL_SLVR_CUSTOMER
+-- comment
 
 CREATE OR REPLACE VIEW {{ DATABASE }}.{{ SCHEMA }}.VW_GOLD_CUSTOMER_ACTIVITY AS
 SELECT
