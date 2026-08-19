@@ -19,7 +19,7 @@ jobs:
       - name: Install Snowflake CLI
         uses: snowflakedb/snowflake-actions@v3
 
-       - name: Deploy Changed SQL Files to DEV
+      - name: Deploy Changed SQL Files to DEV
         env:
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
           SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
