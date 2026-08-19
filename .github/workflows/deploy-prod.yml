@@ -1,4 +1,4 @@
-name: Deploy to DEV
+name: Deploy to PROD
 
 on:
   push:
@@ -28,21 +28,8 @@ jobs:
           SNOWFLAKE_ROLE: ${{ secrets.SNOWFLAKE_ROLE }}
           SNOWFLAKE_WAREHOUSE: ${{ secrets.SNOWFLAKE_WAREHOUSE }}
           SNOWFLAKE_DATABASE: ${{ secrets.SNOWFLAKE_PROD_DATABASE }}
-          SNOWFLAKE_SCHEMA: ${{ secrets.SNOWFLAKE_SCHEMA }}
-
         run: |
-
-          echo "Deploying to $SNOWFLAKE_DATABASE"
-
-          snow sql \
-            --temporary-connection \
-            -q "
-            USE DATABASE ${SNOWFLAKE_DATABASE};
-            USE SCHEMA ${SNOWFLAKE_SCHEMA};
-            "
-
           echo "Finding changed SQL files..."
-
           CHANGED_FILES=$(git diff --name-only \
             ${{ github.event.before }} \
             ${{ github.sha }} \
@@ -53,18 +40,20 @@ jobs:
             exit 0
           fi
 
-          echo "Files to deploy:"
-          echo "$CHANGED_FILES"
-
           for file in $CHANGED_FILES
           do
+            DEPTH=$(echo "$file" | awk -F'/' '{print NF}')
+            if [ "$DEPTH" -ne 5 ]; then
+              echo "::error::$file does not match sql/<layer>/<schema>/<type>/<file>.sql"
+              exit 1
+            fi
+            SCHEMA=$(echo "$file" | cut -d'/' -f3 | tr '[:lower:]' '[:upper:]')
             echo "--------------------------------------"
-            echo "Deploying $file"
-
+            echo "Deploying $file -> ${SNOWFLAKE_DATABASE}.${SCHEMA}"
             snow sql \
               --temporary-connection \
+              -D "DATABASE=${SNOWFLAKE_DATABASE}" \
+              -D "SCHEMA=${SCHEMA}" \
               -f "$file"
-
           done
-
           echo "DEV deployment completed."
