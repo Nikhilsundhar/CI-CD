@@ -11,7 +11,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
@@ -20,7 +19,7 @@ jobs:
       - name: Install Snowflake CLI
         uses: snowflakedb/snowflake-actions@v3
 
-      - name: Deploy Changed SQL Files to DEV
+      - name: Deploy Changed SQL Files to PROD
         env:
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
           SNOWFLAKE_USER: ${{ secrets.SNOWFLAKE_USER }}
@@ -47,13 +46,21 @@ jobs:
               echo "::error::$file does not match sql/<layer>/<schema>/<type>/<file>.sql"
               exit 1
             fi
+
             SCHEMA=$(echo "$file" | cut -d'/' -f3 | tr '[:lower:]' '[:upper:]')
+
             echo "--------------------------------------"
             echo "Deploying $file -> ${SNOWFLAKE_DATABASE}.${SCHEMA}"
+
+            # Render placeholders ourselves -- don't rely on snow CLI templating
+            sed -e "s/{{ *DATABASE *}}/${SNOWFLAKE_DATABASE}/g" \
+                -e "s/{{ *SCHEMA *}}/${SCHEMA}/g" \
+                "$file" > /tmp/rendered.sql
+
             snow sql \
               --temporary-connection \
-              -D "DATABASE=${SNOWFLAKE_DATABASE}" \
-              -D "SCHEMA=${SCHEMA}" \
-              -f "$file"
+              --enable-templating NONE \
+              -f /tmp/rendered.sql
           done
+
           echo "DEV deployment completed."
